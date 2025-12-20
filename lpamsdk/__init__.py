@@ -218,10 +218,10 @@ try:
     # Rename types as per the SDK
     LPAMSDeviceDescriptor = DaqDeviceDescriptor
     LPAMSDeviceHandle = c_longlong
-    LPAMSError = c_int
+    LPAMSError = UlError
 
     # Function getters with proper error handling
-    def _get_function(func_name, arg_types=None, restype=LPAMSError):
+    def _get_function(func_name, arg_types=None, restype=c_int):
         """
         Get a function from the LPAMSDK DLL, handling errors gracefully.
         """
