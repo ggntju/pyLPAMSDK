@@ -75,14 +75,14 @@ def main():
 
     # Step 4: Read current gains
     print("\n4. Reading current gains...")
+    ch0_gain = ctypes.c_int()
     ch1_gain = ctypes.c_int()
     ch2_gain = ctypes.c_int()
-    ch3_gain = ctypes.c_int()
-    err = lp.lpAMSAInReadGain(dev_handle, ctypes.byref(ch1_gain), ctypes.byref(ch2_gain), ctypes.byref(ch3_gain))
+    err = lp.lpAMSAInReadGain(dev_handle, ctypes.byref(ch0_gain), ctypes.byref(ch1_gain), ctypes.byref(ch2_gain))
     if err != lp.LPAMSError.ERR_NO_ERROR:
         print(f"Error reading gains: {err}")
         return 1
-    print(f"Current gains - Ch1: {ch1_gain.value}, Ch2: {ch2_gain.value}, Ch3: {ch3_gain.value}")
+    print(f"Current gains - Ch0: {ch0_gain.value}, Ch1: {ch1_gain.value}, Ch2: {ch2_gain.value}")
 
     # Step 5: Set new gains (example values)
     print("\n5. Setting new gains...")
@@ -91,7 +91,7 @@ def main():
     if err != lp.LPAMSError.ERR_NO_ERROR:
         print(f"Error setting gains: {err}")
         return 1
-    print(f"Set gains to - Ch1: {new_gains[0]}, Ch2: {new_gains[1]}, Ch3: {new_gains[2]}")
+    print(f"Set gains to - Ch0: {new_gains[0]}, Ch1: {new_gains[1]}, Ch2: {new_gains[2]}")
 
     # Step 6: Verify new gains
     print("\n6. Verifying new gains...")
@@ -100,7 +100,7 @@ def main():
     if err != lp.LPAMSError.ERR_NO_ERROR:
         print(f"Error reading gains: {err}")
         return 1
-    print(f"New gains - Ch1: {gains[0]}, Ch2: {gains[1]}, Ch3: {gains[2]}")
+    print(f"New gains - Ch0: {gains[0].value}, Ch1: {gains[1].value}, Ch2: {gains[2].value}")
 
     # Step 7: Perform a scan
     print("\n7. Performing a scan...")

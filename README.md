@@ -25,7 +25,7 @@ pip install .
 ### Enumerations
 
 - `DaqDeviceInterface`: Device interface types (USB_IFC, BLUETOOTH_IFC, ETHERNET_IFC, ANY_IFC).
-- `UlError`: Error codes returned by SDK functions.
+- `LPAMSError`: Error codes returned by SDK functions.
 - `ScanStatus`: Scan status (SS_IDLE, SS_RUNNING).
 
 ### Structures
