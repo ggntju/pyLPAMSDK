@@ -6,6 +6,7 @@ Example script for using the LPAMSDK Python wrapper.
 import sys
 import os
 import ctypes
+import time
 
 # Add the current directory to the path so we can import lpamsdk
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -19,10 +20,13 @@ def main():
 
     # Step 1: Get device inventory
     print("\n1. Getting device inventory...")
+
+    DeviceArray = lp.LPAMSDeviceDescriptor * 1
+    dev_descriptors = DeviceArray()
     
     # First get the number of devices
-    num_devices = ctypes.c_uint(0)
-    err = lp.lpAMSGetDeviceInventory(None, ctypes.byref(num_devices))
+    num_devices = ctypes.c_uint(1)
+    err = lp.lpAMSGetDeviceInventory(dev_descriptors, ctypes.byref(num_devices))
     
     if err != lp.LPAMSError.ERR_NO_ERROR:
         print(f"Error getting device count: {err}")
@@ -52,7 +56,6 @@ def main():
         print(f"  Product ID: {dev.productId}")
         print(f"  Interface: {dev.devInterface}")
         print(f"  Device String: {dev.devString.decode('utf-8')}")
-        print(f"  Unique ID: {dev.uniqueId.decode('utf-8')}")
 
     # Step 2: Create device object
     print("\n2. Creating device object...")
@@ -83,7 +86,7 @@ def main():
 
     # Step 5: Set new gains (example values)
     print("\n5. Setting new gains...")
-    new_gains = (1, 1, 1)
+    new_gains = (2, 3, 4)
     err = lp.lpAMSAInGain(dev_handle, *new_gains)
     if err != lp.LPAMSError.ERR_NO_ERROR:
         print(f"Error setting gains: {err}")
@@ -92,7 +95,8 @@ def main():
 
     # Step 6: Verify new gains
     print("\n6. Verifying new gains...")
-    gains, err = lp.lpAMSAInReadGain(dev_handle)
+    gains = (ctypes.c_int(), ctypes.c_int(), ctypes.c_int())
+    err = lp.lpAMSAInReadGain(dev_handle, (gains[0]), (gains[1]), (gains[2]))
     if err != lp.LPAMSError.ERR_NO_ERROR:
         print(f"Error reading gains: {err}")
         return 1
@@ -100,13 +104,15 @@ def main():
 
     # Step 7: Perform a scan
     print("\n7. Performing a scan...")
+    # bufferSize must be fixed as this value, DO NOT CHANGE IT
+    bufferSize = 5000000
     # Create a buffer to store 4 channels of scan data
-    scan_data = (ctypes.c_double * 4)()
+    scan_data = (ctypes.c_double * bufferSize)()
     err = lp.lpAMSAInScan(dev_handle, scan_data)
     if err != lp.LPAMSError.ERR_NO_ERROR:
         print(f"Error performing scan: {err}")
         return 1
-    print(f"Scan data (4 channels): {list(scan_data)}")
+    # print(f"Scan data (4 channels): {list(scan_data)}")
 
     # Step 8: Get scan status
     print("\n8. Getting scan status...")
@@ -119,9 +125,86 @@ def main():
     
     status_str = "Running" if status.value == lp.ScanStatus.SS_RUNNING else "Idle"
     print(f"Scan status: {status_str}")
-    print(f"Current scan count: {xfer_status.currentScanCount}")
-    print(f"Current total count: {xfer_status.currentTotalCount}")
-    print(f"Current index: {xfer_status.currentIndex}")
+    # print(f"Current scan count: {xfer_status.currentScanCount}")
+    # print(f"Current total count: {xfer_status.currentTotalCount}")
+    # print(f"Current index: {xfer_status.currentIndex}")
+
+    count = 0
+    limit = 100000 * 10
+    pIndex = 0
+    cIndex = 0
+    cycleCount = 0
+
+    data_container_0 = []
+    data_container_1 = []
+    data_container_2 = []
+    data_container_3 = []
+
+    start = time.time()
+    print("Start running")
+
+    while(status.value == lp.ScanStatus.SS_RUNNING and err == lp.LPAMSError.ERR_NO_ERROR and count < limit):
+        if(cycleCount == 400):
+            cycleCount = 0
+        
+        err = lp.lpAMSAInScanStatus(dev_handle, ctypes.byref(status), ctypes.byref(xfer_status))
+        index = xfer_status.currentIndex
+        if(index >= 0):
+            cIndex = index
+            if(cIndex == pIndex):
+                continue
+            if(cIndex > pIndex):
+                for c in range(0, cIndex - pIndex + 1):
+                    for i in range(0, 4):
+                        if  ((i == 0) and ((c + pIndex) % 4 == i)):
+                            # print(f"Ch0: {scan_data[c + pIndex]}", end="\t")
+                            data_container_0.append(scan_data[c + pIndex])
+                        elif((i == 1) and ((c + pIndex) % 4 == i)):
+                            # print(f"Ch1: {scan_data[c + pIndex]}", end="\t")
+                            data_container_1.append(scan_data[c + pIndex])
+                        elif((i == 2) and ((c + pIndex) % 4 == i)):
+                            # print(f"Ch2: {scan_data[c + pIndex]}", end="\t")
+                            data_container_2.append(scan_data[c + pIndex])
+                        elif((i == 3) and ((c + pIndex) % 4 == i)):
+                            # print(f"Ch3: {scan_data[c + pIndex]}", end="\n")
+                            data_container_3.append(scan_data[c + pIndex])
+            if(cIndex < pIndex):
+                for c in range(0, bufferSize - pIndex + 1):
+                    for i in range(0, 4):
+                        if  ((i == 0) and ((c + pIndex) % 4 == i)):
+                            # print(f"Ch0: {scan_data[c + pIndex]}", end="\t")
+                            data_container_0.append(scan_data[c + pIndex])
+                        elif((i == 1) and ((c + pIndex) % 4 == i)):
+                            # print(f"Ch1: {scan_data[c + pIndex]}", end="\t")
+                            data_container_1.append(scan_data[c + pIndex])
+                        elif((i == 2) and ((c + pIndex) % 4 == i)):
+                            # print(f"Ch2: {scan_data[c + pIndex]}", end="\t")
+                            data_container_2.append(scan_data[c + pIndex])
+                        elif((i == 3) and ((c + pIndex) % 4 == i)):
+                            # print(f"Ch3: {scan_data[c + pIndex]}", end="\n")
+                            data_container_3.append(scan_data[c + pIndex])
+
+                cycleCount = cycleCount + 1
+                for c in range(0, cIndex):
+                    for i in range(0, 4):
+                        if  ((i == 0) and ((c) % 4 == i)):
+                            # print(f"Ch0: {scan_data[c]}", end="\t")
+                            data_container_0.append(scan_data[c])
+                        elif((i == 1) and ((c) % 4 == i)):
+                            # print(f"Ch1: {scan_data[c]}", end="\t")
+                            data_container_1.append(scan_data[c])
+                        elif((i == 2) and ((c) % 4 == i)):
+                            # print(f"Ch2: {scan_data[c]}", end="\t")
+                            data_container_2.append(scan_data[c])
+                        elif((i == 3) and ((c) % 4 == i)):
+                            # print(f"Ch3: {scan_data[c]}", end="\n")
+                            data_container_3.append(scan_data[c])
+            
+            pIndex = cIndex
+            count = xfer_status.currentScanCount
+    
+    end = time.time()
+    print(f"Running time: {end - start}")
 
     # Step 9: Disconnect and release device
     print("\n9. Disconnecting and releasing device...")
